@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, alertsTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { db, alertsTable, usersTable } from "@workspace/db";
+import { eq, and, desc, ne } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../lib/auth";
 import {
   SendAlertBody,
@@ -17,9 +17,48 @@ router.get("/alerts", requireAuth, async (req: AuthRequest, res): Promise<void> 
     return;
   }
   const { userId, status } = params.data;
-  const targetUserId = userId ?? req.user!.id;
+  const role = req.user!.role;
 
-  let rows = await db.select().from(alertsTable)
+  // Doctors and admins see ALL patient alerts (not just their own)
+  let rows;
+  if (role === "doctor" || role === "hospital_admin") {
+    // Get alerts only for patients (exclude other doctors/admins/caretakers)
+    const patientUsers = await db
+      .select({ id: usersTable.id, name: usersTable.name })
+      .from(usersTable)
+      .where(eq(usersTable.role, "patient"));
+    const patientIds = patientUsers.map(u => u.id);
+    const patientMap = new Map(patientUsers.map(u => [u.id, u.name]));
+
+    if (patientIds.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    rows = await db.select().from(alertsTable)
+      .orderBy(desc(alertsTable.createdAt));
+
+    // Filter to only patient alerts
+    const patientIdSet = new Set(patientIds);
+    rows = rows.filter(a => patientIdSet.has(a.userId));
+
+    // Attach patient names
+    const enriched = rows.map(a => ({
+      ...a,
+      patientName: patientMap.get(a.userId) ?? "Unknown Patient",
+    }));
+
+    let result = enriched;
+    if (status === "unread") result = enriched.filter(a => !a.isRead);
+    else if (status === "read") result = enriched.filter(a => a.isRead);
+
+    res.json(result);
+    return;
+  }
+
+  // Regular patients/caretakers: only see their own
+  const targetUserId = userId ?? req.user!.id;
+  rows = await db.select().from(alertsTable)
     .where(eq(alertsTable.userId, targetUserId))
     .orderBy(desc(alertsTable.createdAt));
 
@@ -58,9 +97,16 @@ router.patch("/alerts/:alertId/read", requireAuth, async (req: AuthRequest, res)
     return;
   }
 
+  const role = req.user!.role;
+
+  // Doctors/admins can acknowledge any alert (not just their own)
+  const whereClause = (role === "doctor" || role === "hospital_admin")
+    ? eq(alertsTable.id, alertId)
+    : and(eq(alertsTable.id, alertId), eq(alertsTable.userId, req.user!.id));
+
   const [updated] = await db.update(alertsTable)
     .set({ isRead: true })
-    .where(and(eq(alertsTable.id, alertId), eq(alertsTable.userId, req.user!.id)))
+    .where(whereClause)
     .returning();
 
   if (!updated) {
