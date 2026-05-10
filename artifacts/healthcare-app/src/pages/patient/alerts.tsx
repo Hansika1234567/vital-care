@@ -16,7 +16,7 @@ export default function PatientAlerts() {
   const markAsRead = useMarkAlertRead();
 
   const handleMarkAsRead = async (id: number) => {
-    await markAsRead.mutateAsync({ id });
+    await markAsRead.mutateAsync({ alertId: id });
     queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
     queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
   };

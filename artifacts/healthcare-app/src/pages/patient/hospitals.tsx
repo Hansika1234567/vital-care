@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Phone, Building2, Bed, ActivitySquare, Star, Search, Zap, Shield, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 
 const hospitalImages = [
   "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=600&q=80",
@@ -33,8 +34,7 @@ export default function HospitalsList() {
     return matchName && matchSpec;
   });
 
-  const emergency = filtered?.filter(h => h.bedsAvailable > 5);
-  const topRated = filtered?.filter(h => parseFloat(h.rating) >= 4.5);
+  const topRated = filtered?.filter(h => (Number(h.rating) || 0) >= 4.5);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
@@ -139,7 +139,22 @@ export default function HospitalsList() {
   );
 }
 
-function HospitalCard({ hospital, imgIndex, featured }: { hospital: { id: number; name: string; address: string; phone: string; rating: string; distance: string; bedsAvailable: number; icuAvailable: number; specialties: string[] }; imgIndex: number; featured?: boolean }) {
+function HospitalCard({ hospital, imgIndex, featured }: {
+  hospital: {
+    id: number;
+    name: string;
+    address: string;
+    phone: string;
+    rating?: number | null;
+    distance?: string | null;
+    bedsAvailable: number;
+    icuAvailable: number;
+    specialties: string[];
+  };
+  imgIndex: number;
+  featured?: boolean;
+}) {
+  const [, navigate] = useLocation();
   const img = hospitalImages[imgIndex % hospitalImages.length];
   const isEmergency = hospital.bedsAvailable > 5;
 
@@ -165,8 +180,8 @@ function HospitalCard({ hospital, imgIndex, featured }: { hospital: { id: number
           <h3 className="text-white font-bold text-lg leading-tight line-clamp-2 drop-shadow">{hospital.name}</h3>
           <div className="flex items-center gap-1 mt-1">
             <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-            <span className="text-amber-300 text-sm font-semibold">{hospital.rating}</span>
-            <span className="text-white/60 text-xs ml-1">• {hospital.distance}</span>
+            <span className="text-amber-300 text-sm font-semibold">{hospital.rating ?? "–"}</span>
+            {hospital.distance && <span className="text-white/60 text-xs ml-1">• {hospital.distance}</span>}
           </div>
         </div>
       </div>
@@ -213,7 +228,7 @@ function HospitalCard({ hospital, imgIndex, featured }: { hospital: { id: number
           <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs" onClick={() => window.open(`tel:${hospital.phone}`)}>
             <Phone className="h-3.5 w-3.5" /> Call
           </Button>
-          <Button size="sm" className="flex-1 gap-1.5 text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0">
+          <Button size="sm" className="flex-1 gap-1.5 text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0" onClick={() => navigate("/appointments")}>
             <Calendar className="h-3.5 w-3.5" /> Book Appointment
           </Button>
         </div>

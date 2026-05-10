@@ -1,18 +1,25 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useGetAppointments, useCreateAppointment } from "@workspace/api-client-react";
+import { useGetAppointments, useCreateAppointment, useUpdateAppointment } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, Clock, User, Plus, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, User, Plus, Loader2, XCircle, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+
+function authFetch(url: string, opts: RequestInit = {}) {
+  const token = localStorage.getItem("healthcare_token");
+  return fetch(url, { ...opts, headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...(opts.headers || {}) } });
+}
 
 export default function PatientAppointments() {
   const { user } = useAuth();
@@ -20,15 +27,25 @@ export default function PatientAppointments() {
   const { toast } = useToast();
   const { data: appointments, isLoading } = useGetAppointments({ userId: user?.id, role: "patient" });
   const createAppointment = useCreateAppointment();
+  const updateAppointment = useUpdateAppointment();
   const [isOpen, setIsOpen] = useState(false);
+  const [rescheduleId, setRescheduleId] = useState<number | null>(null);
+  const [isRescheduling, setIsRescheduling] = useState(false);
 
   const [formData, setFormData] = useState({
-    doctorId: "2", // Mock default
+    doctorId: "2",
     date: "",
     time: "",
     reason: "",
     notes: ""
   });
+
+  const [rescheduleData, setRescheduleData] = useState({ date: "", time: "" });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/analytics/dashboard"] });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,12 +59,43 @@ export default function PatientAppointments() {
           notes: formData.notes
         }
       });
-      toast({ title: "Success", description: "Appointment booked successfully" });
+      toast({ title: "Appointment booked", description: "Your appointment has been scheduled." });
       setIsOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-    } catch (error) {
+      setFormData({ doctorId: "2", date: "", time: "", reason: "", notes: "" });
+      invalidate();
+    } catch {
       toast({ title: "Error", description: "Failed to book appointment", variant: "destructive" });
+    }
+  };
+
+  const handleCancel = async (appointmentId: number) => {
+    try {
+      await updateAppointment.mutateAsync({ appointmentId, data: { status: "cancelled" } });
+      toast({ title: "Appointment cancelled", description: "Your appointment has been cancelled." });
+      invalidate();
+    } catch {
+      toast({ title: "Error", description: "Failed to cancel appointment", variant: "destructive" });
+    }
+  };
+
+  const handleReschedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rescheduleId) return;
+    setIsRescheduling(true);
+    try {
+      const scheduledAt = new Date(`${rescheduleData.date}T${rescheduleData.time}`).toISOString();
+      const res = await authFetch(`/api/appointments/${rescheduleId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ scheduledAt }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast({ title: "Appointment rescheduled", description: "Your appointment has been updated." });
+      setRescheduleId(null);
+      invalidate();
+    } catch {
+      toast({ title: "Error", description: "Failed to reschedule appointment", variant: "destructive" });
+    } finally {
+      setIsRescheduling(false);
     }
   };
 
@@ -68,7 +116,7 @@ export default function PatientAppointments() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Appointments</h1>
           <p className="text-muted-foreground mt-1">Manage your upcoming and past doctor visits.</p>
         </div>
-        
+
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button className="shrink-0"><Plus className="mr-2 h-4 w-4" /> Book Appointment</Button>
@@ -97,7 +145,8 @@ export default function PatientAppointments() {
                 <Label htmlFor="notes">Additional notes</Label>
                 <Textarea id="notes" placeholder="Any specific symptoms?" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
               </div>
-              <div className="pt-4 flex justify-end">
+              <div className="pt-4 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
                 <Button type="submit" disabled={createAppointment.isPending}>
                   {createAppointment.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Confirm Booking
@@ -107,6 +156,35 @@ export default function PatientAppointments() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Reschedule Dialog */}
+      <Dialog open={rescheduleId !== null} onOpenChange={open => !open && setRescheduleId(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Reschedule Appointment</DialogTitle>
+            <DialogDescription>Choose a new date and time.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleReschedule} className="space-y-4 pt-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>New Date</Label>
+                <Input type="date" required value={rescheduleData.date} onChange={e => setRescheduleData(d => ({...d, date: e.target.value}))} />
+              </div>
+              <div className="space-y-2">
+                <Label>New Time</Label>
+                <Input type="time" required value={rescheduleData.time} onChange={e => setRescheduleData(d => ({...d, time: e.target.value}))} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setRescheduleId(null)}>Cancel</Button>
+              <Button type="submit" disabled={isRescheduling}>
+                {isRescheduling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Save
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-4 md:grid-cols-2">
         {isLoading ? (
@@ -121,7 +199,7 @@ export default function PatientAppointments() {
                       {apt.status}
                     </Badge>
                   </div>
-                  
+
                   <div>
                     <h3 className="text-xl font-semibold mb-1">{apt.reason}</h3>
                     <div className="flex items-center text-muted-foreground text-sm gap-2">
@@ -142,10 +220,43 @@ export default function PatientAppointments() {
                   </div>
                 </div>
 
-                {apt.status === 'pending' && (
+                {apt.status === "pending" && (
                   <div className="flex gap-2 pt-2 border-t">
-                    <Button variant="outline" className="w-full" size="sm">Reschedule</Button>
-                    <Button variant="outline" className="w-full text-destructive hover:bg-destructive/10" size="sm">Cancel</Button>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-1.5"
+                      size="sm"
+                      onClick={() => {
+                        setRescheduleData({ date: "", time: "" });
+                        setRescheduleId(apt.id);
+                      }}
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" /> Reschedule
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" className="w-full text-destructive hover:bg-destructive/10 gap-1.5" size="sm">
+                          <XCircle className="h-3.5 w-3.5" /> Cancel
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Cancel Appointment?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will cancel your appointment for "{apt.reason}". This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Keep It</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive hover:bg-destructive/90"
+                            onClick={() => handleCancel(apt.id)}
+                          >
+                            Yes, Cancel
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 )}
               </CardContent>

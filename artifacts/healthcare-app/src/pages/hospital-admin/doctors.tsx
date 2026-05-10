@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { customFetch } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,12 +15,24 @@ interface Doctor {
   createdAt: string;
 }
 
+function authFetch(url: string, opts: RequestInit = {}) {
+  const token = localStorage.getItem("healthcare_token");
+  return fetch(url, {
+    ...opts,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...(opts.headers || {}),
+    },
+  }).then(r => r.json());
+}
+
 export default function AdminDoctors() {
   const [search, setSearch] = useState("");
 
   const { data: doctors, isLoading } = useQuery<Doctor[]>({
     queryKey: ["/api/doctors"],
-    queryFn: () => customFetch("/api/doctors"),
+    queryFn: () => authFetch("/api/doctors"),
   });
 
   const filtered = doctors?.filter(d =>

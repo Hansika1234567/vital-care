@@ -18,8 +18,10 @@ interface Message {
 
 declare global {
   interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SpeechRecognition: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    webkitSpeechRecognition: any;
   }
 }
 
@@ -37,7 +39,8 @@ export default function AiAssistant() {
   ]);
   const chatMutation = useAiChat();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -75,7 +78,7 @@ export default function AiAssistant() {
     recognition.maxAlternatives = 1;
     recognitionRef.current = recognition;
     recognition.onstart = () => setIsListening(true);
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       const lower = transcript.toLowerCase();
       if (lower.includes("call ambulance")) {

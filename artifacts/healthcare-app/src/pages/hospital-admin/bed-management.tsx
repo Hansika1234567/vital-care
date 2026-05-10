@@ -40,8 +40,13 @@ const colorMap: Record<string, { bg: string; bar: string; text: string }> = {
 };
 
 export default function BedManagement() {
-  const { data: hospitals, isLoading } = useGetHospitals();
-  const [lastUpdated] = useState(new Date());
+  const { data: hospitals, isLoading, refetch } = useGetHospitals();
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+
+  const handleRefresh = () => {
+    refetch();
+    setLastUpdated(new Date());
+  };
 
   const totalBeds = deptBeds.reduce((s, d) => s + d.total, 0);
   const totalOccupied = deptBeds.reduce((s, d) => s + d.occupied, 0);
@@ -66,7 +71,7 @@ export default function BedManagement() {
             <Clock className="h-3 w-3" />
             Updated {lastUpdated.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
           </Badge>
-          <Button variant="outline" size="sm" className="gap-1.5">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleRefresh}>
             <RefreshCw className="h-3.5 w-3.5" />
             Refresh
           </Button>
