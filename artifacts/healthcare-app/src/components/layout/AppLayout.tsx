@@ -23,12 +23,13 @@ export function AppLayout({ children }: AppLayoutProps) {
   // Allow public access to landing, login, register
   const isPublicRoute = location === "/" || location === "/login" || location === "/register";
 
-  if (!user && !isPublicRoute) {
-    return null; // Will redirect in ProtectedRoute
-  }
-
   if (isPublicRoute && !user) {
     return <div className="min-h-screen bg-background">{children}</div>;
+  }
+
+  if (!user && !isPublicRoute) {
+    // Render children so ProtectedRoute can execute its <Redirect to="/login" />
+    return <>{children}</>;
   }
 
   return (
