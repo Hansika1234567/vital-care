@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useGetVitalHistory } from "@workspace/api-client-react";
+import { useLanguage } from "@/contexts/language-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 export default function VitalsHistory() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { data, isLoading } = useGetVitalHistory({ userId: user?.id });
 
   const getStatusColor = (status: string) => {
@@ -22,14 +24,14 @@ export default function VitalsHistory() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Vitals History</h1>
-        <p className="text-muted-foreground mt-1">A chronological timeline of your health measurements.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">{t("vitalsHistory")}</h1>
+        <p className="text-muted-foreground mt-1">{t("chronologicalTimeline")}</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3 mb-8">
         <Card className="bg-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Total Records</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t("totalRecords")}</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{data?.records?.length || 0}</div>}
@@ -37,7 +39,7 @@ export default function VitalsHistory() {
         </Card>
         <Card className="bg-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Total Alerts</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t("totalAlerts")}</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{data?.alertCount || 0}</div>}
@@ -45,7 +47,7 @@ export default function VitalsHistory() {
         </Card>
         <Card className="bg-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Critical Readings</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t("criticalReadings")}</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold text-destructive">{data?.criticalCount || 0}</div>}
@@ -55,8 +57,8 @@ export default function VitalsHistory() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Timeline</CardTitle>
-          <CardDescription>Your measurements over time</CardDescription>
+          <CardTitle>{t("timeline")}</CardTitle>
+          <CardDescription>{t("yourMeasurements")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
@@ -78,11 +80,13 @@ export default function VitalsHistory() {
                   )}>
                     <Activity className="h-4 w-4" />
                   </div>
-                  
+
                   <Card className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] hover-elevate transition-all hover:border-primary/50">
                     <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between space-y-0">
                       <div className="font-semibold text-sm">{new Date(record.createdAt).toLocaleString()}</div>
-                      <Badge variant="outline" className={getStatusColor(record.status)}>{record.status}</Badge>
+                      <Badge variant="outline" className={getStatusColor(record.status)}>
+                        {record.status === "normal" ? t("normal") : record.status === "risk" ? t("risk") : t("critical")}
+                      </Badge>
                     </CardHeader>
                     <CardContent className="p-4 pt-0">
                       <div className="grid grid-cols-2 gap-y-2 text-sm mt-2">
@@ -102,7 +106,7 @@ export default function VitalsHistory() {
                 </div>
               ))
             ) : (
-              <div className="text-center py-12 text-muted-foreground bg-card rounded-lg border">No records found.</div>
+              <div className="text-center py-12 text-muted-foreground bg-card rounded-lg border">{t("noRecords")}</div>
             )}
           </div>
         </CardContent>

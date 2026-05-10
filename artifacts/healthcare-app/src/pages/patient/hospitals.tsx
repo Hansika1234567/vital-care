@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useGetHospitals } from "@workspace/api-client-react";
+import { useLanguage } from "@/contexts/language-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,10 +18,13 @@ const hospitalImages = [
   "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=600&q=80",
   "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=600&q=80",
   "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80",
+  "https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=600&q=80",
+  "https://images.unsplash.com/photo-1504813184591-01572f98c85f?w=600&q=80",
 ];
 
 export default function HospitalsList() {
   const { data: hospitals, isLoading } = useGetHospitals();
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [specialty, setSpecialty] = useState("all");
 
@@ -34,7 +38,7 @@ export default function HospitalsList() {
     return matchName && matchSpec;
   });
 
-  const topRated = filtered?.filter(h => (Number(h.rating) || 0) >= 4.5);
+  const topRated = filtered?.filter(h => (Number(h.rating) || 0) >= 4.8);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
@@ -46,19 +50,24 @@ export default function HospitalsList() {
             <Shield className="h-5 w-5" />
             <span className="text-blue-200 text-sm font-medium">Trusted Hospital Network</span>
           </div>
-          <h1 className="text-3xl font-bold mb-2">Find the Best Hospitals</h1>
-          <p className="text-blue-100 max-w-lg mb-6">Access premium healthcare facilities near you. Real-time bed availability, ICU status, and instant appointment booking.</p>
+          <h1 className="text-3xl font-bold mb-2">{t("findBestHospitals")}</h1>
+          <p className="text-blue-100 max-w-lg mb-6">{t("accessPremiumCare")}</p>
           <div className="flex gap-4 flex-wrap">
             <div className="relative flex-1 min-w-56">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-300" />
-              <Input placeholder="Search hospitals, locations..." className="pl-10 h-11 bg-white/15 border-white/30 text-white placeholder:text-blue-200 focus-visible:ring-white/30 focus-visible:bg-white/20" value={search} onChange={e => setSearch(e.target.value)} />
+              <Input
+                placeholder={t("searchHospitals")}
+                className="pl-10 h-11 bg-white/15 border-white/30 text-white placeholder:text-blue-200 focus-visible:ring-white/30 focus-visible:bg-white/20"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
             </div>
             <Select value={specialty} onValueChange={setSpecialty}>
               <SelectTrigger className="w-48 h-11 bg-white/15 border-white/30 text-white">
-                <SelectValue placeholder="All Specialties" />
+                <SelectValue placeholder={t("allSpecialties")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Specialties</SelectItem>
+                <SelectItem value="all">{t("allSpecialties")}</SelectItem>
                 {allSpecialties.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -74,7 +83,7 @@ export default function HospitalsList() {
             </div>
             <div>
               <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{isLoading ? "–" : hospitals?.reduce((s, h) => s + h.bedsAvailable, 0)}</div>
-              <div className="text-xs text-muted-foreground">Total Available Beds</div>
+              <div className="text-xs text-muted-foreground">{t("availableBeds")}</div>
             </div>
           </CardContent>
         </Card>
@@ -85,7 +94,7 @@ export default function HospitalsList() {
             </div>
             <div>
               <div className="text-2xl font-bold text-red-700 dark:text-red-400">{isLoading ? "–" : hospitals?.reduce((s, h) => s + h.icuAvailable, 0)}</div>
-              <div className="text-xs text-muted-foreground">ICU Beds Available</div>
+              <div className="text-xs text-muted-foreground">{t("icuBeds")}</div>
             </div>
           </CardContent>
         </Card>
@@ -96,7 +105,7 @@ export default function HospitalsList() {
             </div>
             <div>
               <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{isLoading ? "–" : hospitals?.length}</div>
-              <div className="text-xs text-muted-foreground">Partner Hospitals</div>
+              <div className="text-xs text-muted-foreground">{t("partnerHospitals")}</div>
             </div>
           </CardContent>
         </Card>
@@ -106,7 +115,7 @@ export default function HospitalsList() {
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
-            <h2 className="text-xl font-bold">Top Rated</h2>
+            <h2 className="text-xl font-bold">{t("topRated")}</h2>
           </div>
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {topRated.slice(0, 3).map((hospital, idx) => (
@@ -119,7 +128,7 @@ export default function HospitalsList() {
       <div>
         <div className="flex items-center gap-2 mb-4">
           <Building2 className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-bold">All Hospitals {filtered?.length ? `(${filtered.length})` : ""}</h2>
+          <h2 className="text-xl font-bold">{t("allHospitals")} {filtered?.length ? `(${filtered.length})` : ""}</h2>
         </div>
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {isLoading ? (
@@ -129,8 +138,8 @@ export default function HospitalsList() {
           ) : (
             <div className="col-span-full text-center py-16 bg-card rounded-xl border border-dashed text-muted-foreground">
               <Building2 className="h-12 w-12 mx-auto mb-4 opacity-20" />
-              <p className="text-lg font-medium text-foreground">No hospitals found</p>
-              <p>Try adjusting your search or filters.</p>
+              <p className="text-lg font-medium text-foreground">{t("noHospitals")}</p>
+              <p>{t("adjustFilters")}</p>
             </div>
           )}
         </div>
@@ -155,14 +164,19 @@ function HospitalCard({ hospital, imgIndex, featured }: {
   featured?: boolean;
 }) {
   const [, navigate] = useLocation();
+  const { t } = useLanguage();
   const img = hospitalImages[imgIndex % hospitalImages.length];
-  const isEmergency = hospital.bedsAvailable > 5;
+  const isEmergency = hospital.bedsAvailable > 50;
 
   return (
     <Card className={cn("group overflow-hidden rounded-2xl border-0 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer", featured && "ring-2 ring-amber-400/50 ring-offset-2")}>
       <div className="relative h-44 overflow-hidden">
-        <img src={img} alt={hospital.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=600&q=80"; }} />
+        <img
+          src={img}
+          alt={hospital.name}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=600&q=80"; }}
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         <div className="absolute top-3 right-3 flex gap-2">
           {isEmergency && (
@@ -172,7 +186,7 @@ function HospitalCard({ hospital, imgIndex, featured }: {
           )}
           {featured && (
             <Badge className="bg-amber-400/90 text-amber-900 text-[10px] gap-1 border-0 backdrop-blur-sm">
-              <Star className="h-3 w-3 fill-amber-900" /> Top Rated
+              <Star className="h-3 w-3 fill-amber-900" /> {t("topRated")}
             </Badge>
           )}
         </div>
@@ -216,7 +230,7 @@ function HospitalCard({ hospital, imgIndex, featured }: {
         </div>
 
         <div>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Specialties</p>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">{t("specialties")}</p>
           <div className="flex flex-wrap gap-1.5">
             {hospital.specialties.map(spec => (
               <Badge key={spec} variant="secondary" className="text-[10px] font-medium rounded-full">{spec}</Badge>
@@ -226,10 +240,10 @@ function HospitalCard({ hospital, imgIndex, featured }: {
 
         <div className="flex gap-2 mt-auto pt-2 border-t">
           <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs" onClick={() => window.open(`tel:${hospital.phone}`)}>
-            <Phone className="h-3.5 w-3.5" /> Call
+            <Phone className="h-3.5 w-3.5" /> {t("call")}
           </Button>
-          <Button size="sm" className="flex-1 gap-1.5 text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0" onClick={() => navigate("/appointments")}>
-            <Calendar className="h-3.5 w-3.5" /> Book Appointment
+          <Button size="sm" className="flex-1 gap-1.5 text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0" onClick={() => navigate("/patient/appointments")}>
+            <Calendar className="h-3.5 w-3.5" /> {t("bookAppointment")}
           </Button>
         </div>
       </CardContent>

@@ -1,8 +1,8 @@
-import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetAlerts, useMarkAlertRead } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLanguage } from "@/contexts/language-context";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 export default function PatientAlerts() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const { data: alerts, isLoading } = useGetAlerts({ userId: user?.id });
   const markAsRead = useMarkAlertRead();
@@ -24,8 +25,8 @@ export default function PatientAlerts() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Alerts & Notifications</h1>
-        <p className="text-muted-foreground mt-1">Important health warnings and system notifications.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">{t("alertsNotifications")}</h1>
+        <p className="text-muted-foreground mt-1">{t("healthWarnings")}</p>
       </div>
 
       <div className="space-y-4">
@@ -46,7 +47,7 @@ export default function PatientAlerts() {
                 )}>
                   {alert.severity === "critical" ? <Flame className="h-6 w-6" /> : <AlertTriangle className="h-6 w-6" />}
                 </div>
-                
+
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -58,7 +59,7 @@ export default function PatientAlerts() {
                     </span>
                   </div>
                   <p className="text-foreground/90">{alert.message}</p>
-                  
+
                   {alert.vitals && (
                     <div className="mt-3 p-3 bg-card rounded border text-sm font-mono flex items-center gap-2">
                       <Activity className="h-4 w-4 text-muted-foreground" />
@@ -68,15 +69,15 @@ export default function PatientAlerts() {
                 </div>
 
                 {!alert.isRead && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleMarkAsRead(alert.id)}
                     disabled={markAsRead.isPending}
                     className="shrink-0 mt-1"
                   >
                     <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Mark Read
+                    {t("markRead")}
                   </Button>
                 )}
               </CardContent>
@@ -85,8 +86,8 @@ export default function PatientAlerts() {
         ) : (
           <div className="text-center py-16 bg-muted/30 rounded-xl border border-dashed">
             <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-4 opacity-50" />
-            <h3 className="text-lg font-medium">All caught up</h3>
-            <p className="text-muted-foreground">You have no active alerts.</p>
+            <h3 className="text-lg font-medium">{t("allCaughtUp")}</h3>
+            <p className="text-muted-foreground">{t("noActiveAlerts")}</p>
           </div>
         )}
       </div>

@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage } from "@/contexts/language-context";
 import { useAiChat } from "@workspace/api-client-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -27,6 +28,7 @@ declare global {
 
 export default function AiAssistant() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -82,9 +84,9 @@ export default function AiAssistant() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast({ title: "Report downloaded", description: "Your health report has been downloaded successfully." });
+      toast({ title: t("reportDownloaded"), description: t("reportSuccess") });
     } catch (err) {
-      toast({ title: "Report failed", description: err instanceof Error ? err.message : "Could not generate report. Please try again.", variant: "destructive" });
+      toast({ title: t("reportFailed"), description: err instanceof Error ? err.message : t("reportFailed"), variant: "destructive" });
     } finally {
       setIsDownloading(false);
     }
@@ -124,17 +126,17 @@ export default function AiAssistant() {
     };
     recognition.onerror = () => {
       setIsListening(false);
-      toast({ title: "Voice error", description: "Could not capture voice. Please try again.", variant: "destructive" });
+      toast({ title: t("voiceError"), description: t("couldNotCapture"), variant: "destructive" });
     };
     recognition.onend = () => setIsListening(false);
     recognition.start();
   };
 
   const quickActions = [
-    { label: "Heart Rate", icon: Activity, msg: "What is a normal resting heart rate?" },
-    { label: "Blood Pressure", icon: Stethoscope, msg: "How can I lower my blood pressure naturally?" },
+    { label: t("heartRate"), icon: Activity, msg: "What is a normal resting heart rate?" },
+    { label: t("bloodPressure"), icon: Stethoscope, msg: "How can I lower my blood pressure naturally?" },
     { label: "Diabetes Tips", icon: Sparkles, msg: "What are the warning signs of diabetes?" },
-    { label: "Emergency", icon: Phone, msg: "What should I do in a cardiac emergency?" },
+    { label: t("emergency"), icon: Phone, msg: "What should I do in a cardiac emergency?" },
   ];
 
   const formatTime = (d: Date) => d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
@@ -145,28 +147,18 @@ export default function AiAssistant() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
             <Sparkles className="h-8 w-8 text-primary" />
-            AI Health Assistant
+            {t("aiHealthAssistant")}
           </h1>
-          <p className="text-muted-foreground mt-1">Ask anything — powered by medical AI. Voice-enabled.</p>
+          <p className="text-muted-foreground mt-1">{t("askAnything")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="text-xs gap-1">
             <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
-            Online
+            {t("online")}
           </Badge>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-xs"
-            onClick={handleGetReport}
-            disabled={isDownloading}
-          >
-            {isDownloading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Download className="h-3.5 w-3.5" />
-            )}
-            {isDownloading ? "Generating..." : "Get Report"}
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={handleGetReport} disabled={isDownloading}>
+            {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            {isDownloading ? t("generating") : t("getReport")}
           </Button>
         </div>
       </div>
@@ -192,15 +184,9 @@ export default function AiAssistant() {
             <p className="text-xs text-muted-foreground">Medical AI Assistant • Always available</p>
           </div>
           <div className="ml-auto">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-xs text-muted-foreground hover:text-primary"
-              onClick={handleGetReport}
-              disabled={isDownloading}
-            >
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-primary" onClick={handleGetReport} disabled={isDownloading}>
               {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
-              {isDownloading ? "Generating..." : "Download PDF Report"}
+              {isDownloading ? t("generating") : t("downloadReport")}
             </Button>
           </div>
         </div>
@@ -235,7 +221,7 @@ export default function AiAssistant() {
                 </div>
                 <div className="px-4 py-3 rounded-2xl bg-muted/60 border rounded-tl-sm text-foreground flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  <span className="text-muted-foreground text-sm">Thinking...</span>
+                  <span className="text-muted-foreground text-sm">{t("thinking")}</span>
                 </div>
               </div>
             )}
@@ -246,25 +232,19 @@ export default function AiAssistant() {
           {isListening && (
             <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
               <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
-              Listening... speak now
+              {t("listeningSpeak")}
             </div>
           )}
           <form onSubmit={(e) => { e.preventDefault(); handleSend(input); }} className="flex gap-2">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask anything about your health..."
+              placeholder={t("askHealth")}
               className="flex-1 h-11 bg-muted/30 border-border focus-visible:ring-primary/20"
               disabled={chatMutation.isPending}
             />
-            <Button
-              type="button"
-              size="icon"
-              variant={isListening ? "destructive" : "outline"}
-              className="h-11 w-11 shrink-0 rounded-full"
-              onClick={handleVoice}
-              title="Voice input"
-            >
+            <Button type="button" size="icon" variant={isListening ? "destructive" : "outline"}
+              className="h-11 w-11 shrink-0 rounded-full" onClick={handleVoice} title="Voice input">
               {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </Button>
             <Button type="submit" size="icon" className="h-11 w-11 shrink-0 rounded-full" disabled={!input.trim() || chatMutation.isPending}>
@@ -272,7 +252,7 @@ export default function AiAssistant() {
             </Button>
           </form>
           <div className="text-center mt-2 text-[10px] text-muted-foreground uppercase tracking-widest">
-            AI can make mistakes. Always consult a real doctor for medical advice.
+            {t("alwaysConsult")}
           </div>
         </div>
       </Card>

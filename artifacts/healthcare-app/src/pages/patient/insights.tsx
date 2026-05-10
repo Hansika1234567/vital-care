@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/contexts/language-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -63,6 +64,7 @@ function ScoreRing({ score }: { score: number }) {
 }
 
 export default function AiInsights() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery<InsightsData>({
     queryKey: ["insights"],
     queryFn: () => fetchWithAuth("/api/insights"),
@@ -78,36 +80,42 @@ export default function AiInsights() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Brain className="h-8 w-8 text-primary" />
-            AI Health Insights
+            {t("aiInsightsTitle")}
           </h1>
-          <p className="text-muted-foreground mt-1">Personalized analysis of your last 7 days of health data.</p>
+          <p className="text-muted-foreground mt-1">{t("poweredByAI")}</p>
         </div>
         {data && (
-          <Badge variant="outline" className="text-xs shrink-0">{data.period} • {data.recordCount} readings</Badge>
+          <Badge variant="outline" className="text-xs shrink-0">
+            {data.period} • {data.recordCount} {t("readings")}
+          </Badge>
         )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="md:col-span-1 flex flex-col items-center justify-center py-8 border-2 border-primary/10">
-          <p className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider">Health Score</p>
+          <p className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider">{t("healthScore")}</p>
           {isLoading ? <Skeleton className="h-36 w-36 rounded-full" /> : data?.score != null ? (
             <ScoreRing score={data.score} />
           ) : (
             <div className="text-center text-muted-foreground">
               <Info className="h-10 w-10 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No data yet</p>
+              <p className="text-sm">{t("noInsights")}</p>
             </div>
           )}
           {data?.score != null && (
             <p className="text-sm mt-4 font-medium text-center px-4">
-              {data.score >= 70 ? "Your health metrics are looking great!" : data.score >= 45 ? "Some areas need attention." : "Please consult your doctor soon."}
+              {data.score >= 70
+                ? "Your health metrics are looking great!"
+                : data.score >= 45
+                ? "Some areas need attention."
+                : "Please consult your doctor soon."}
             </p>
           )}
         </Card>
 
         <Card className="md:col-span-2">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Weekly Summary</CardTitle>
+            <CardTitle className="text-base">{t("overallHealth")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {isLoading ? (
@@ -118,15 +126,15 @@ export default function AiInsights() {
             <div className="grid grid-cols-3 gap-3 pt-2">
               <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 rounded-xl p-3 text-center">
                 <div className="text-2xl font-bold text-emerald-600">{isLoading ? "–" : goodCount}</div>
-                <div className="text-xs text-emerald-700 dark:text-emerald-400 mt-1 font-medium">Good</div>
+                <div className="text-xs text-emerald-700 dark:text-emerald-400 mt-1 font-medium">{t("normal")}</div>
               </div>
               <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900 rounded-xl p-3 text-center">
                 <div className="text-2xl font-bold text-amber-600">{isLoading ? "–" : warnCount}</div>
-                <div className="text-xs text-amber-700 dark:text-amber-400 mt-1 font-medium">Watch</div>
+                <div className="text-xs text-amber-700 dark:text-amber-400 mt-1 font-medium">{t("warning")}</div>
               </div>
               <div className="bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900 rounded-xl p-3 text-center">
                 <div className="text-2xl font-bold text-red-600">{isLoading ? "–" : critCount}</div>
-                <div className="text-xs text-red-700 dark:text-red-400 mt-1 font-medium">Critical</div>
+                <div className="text-xs text-red-700 dark:text-red-400 mt-1 font-medium">{t("critical")}</div>
               </div>
             </div>
           </CardContent>
@@ -135,6 +143,13 @@ export default function AiInsights() {
 
       <div>
         <h2 className="text-lg font-semibold mb-4">Detailed Insights</h2>
+        {!isLoading && !data?.insights?.length && (
+          <div className="text-center py-16 bg-muted/30 rounded-xl border border-dashed">
+            <Brain className="h-12 w-12 text-primary mx-auto mb-4 opacity-30" />
+            <p className="font-medium">{t("noInsights")}</p>
+            <p className="text-sm text-muted-foreground mt-1">{t("recordVitalsFirst")}</p>
+          </div>
+        )}
         <div className="grid gap-4 md:grid-cols-2">
           {isLoading ? (
             Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)
