@@ -26,6 +26,8 @@ if (!basePath) {
   );
 }
 
+const apiPort = process.env.API_PORT ?? "5000";
+
 export default defineConfig({
   base: basePath,
   plugins: [
@@ -68,7 +70,7 @@ export default defineConfig({
     },
     proxy: {
       "/api": {
-        target: "http://localhost:5000",
+        target: `http://localhost:${apiPort}`,
         changeOrigin: true,
         rewrite: (path) => path,
       },

@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed-vitals": "tsx ./src/seed-vitals.ts",
+    "seed-hospitals": "tsx ./src/seed-hospitals.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

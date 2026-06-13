@@ -6,8 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface Hospital {
-  id: number;
+export interface HospitalInput {
   name: string;
   imageUrl: string;
   description: string;
@@ -31,5 +30,4 @@ export interface Hospital {
   latitude?: number | null;
   /** @nullable */
   longitude?: number | null;
-  createdAt: Date;
 }

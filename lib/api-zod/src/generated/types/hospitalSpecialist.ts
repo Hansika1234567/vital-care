@@ -5,9 +5,9 @@
  * Healthcare Monitoring Platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { User } from './user';
 
-export interface AuthResponse {
-  token: string;
-  user: User;
+export interface HospitalSpecialist {
+  name: string;
+  specialty: string;
+  experienceYears: number;
 }

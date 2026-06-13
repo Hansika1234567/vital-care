@@ -378,6 +378,31 @@ paths:
       operationId: getHospitals
       tags: [hospitals]
       summary: Get hospitals list
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: city
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: specialty
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: hasBeds
+          in: query
+          schema:
+            type: ["boolean", "null"]
+        - name: hasIcu
+          in: query
+          schema:
+            type: ["boolean", "null"]
+        - name: emergencyAvailable
+          in: query
+          schema:
+            type: ["boolean", "null"]
       responses:
         "200":
           description: List of hospitals
@@ -387,6 +412,169 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Hospital"
+    post:
+      operationId: createHospital
+      tags: [hospitals]
+      summary: Create a hospital
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HospitalInput"
+      responses:
+        "201":
+          description: Hospital created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Hospital"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /hospitals/{hospitalId}:
+    get:
+      operationId: getHospital
+      tags: [hospitals]
+      summary: Get hospital details
+      parameters:
+        - name: hospitalId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Hospital details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HospitalDetail"
+        "404":
+          description: Hospital not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateHospital
+      tags: [hospitals]
+      summary: Update a hospital
+      parameters:
+        - name: hospitalId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HospitalInput"
+      responses:
+        "200":
+          description: Hospital updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Hospital"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Hospital not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteHospital
+      tags: [hospitals]
+      summary: Delete a hospital
+      parameters:
+        - name: hospitalId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Hospital deleted
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Hospital not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /hospitals/{hospitalId}/availability:
+    put:
+      operationId: updateHospitalAvailability
+      tags: [hospitals]
+      summary: Update hospital bed and ICU availability
+      parameters:
+        - name: hospitalId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HospitalAvailabilityUpdate"
+      responses:
+        "200":
+          description: Availability updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Hospital"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Hospital not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /ai/chat:
     post:
@@ -762,28 +950,189 @@ components:
 
     Hospital:
       type: object
-      required: [id, name, address, phone, specialties, bedsAvailable, icuAvailable]
+      required:
+        - id
+        - name
+        - imageUrl
+        - description
+        - address
+        - city
+        - state
+        - phone
+        - email
+        - specialties
+        - totalBeds
+        - availableBeds
+        - totalICUBeds
+        - availableICUBeds
+        - emergencyAvailable
+        - ambulanceAvailable
+        - createdAt
       properties:
         id:
           type: integer
         name:
           type: string
+        imageUrl:
+          type: string
+        description:
+          type: string
         address:
+          type: string
+        city:
+          type: string
+        state:
           type: string
         phone:
           type: string
+        email:
+          type: string
+        website:
+          type: ["string", "null"]
         specialties:
           type: array
           items:
             type: string
-        bedsAvailable:
+        totalBeds:
           type: integer
-        icuAvailable:
+        availableBeds:
           type: integer
+        totalICUBeds:
+          type: integer
+        availableICUBeds:
+          type: integer
+        emergencyAvailable:
+          type: boolean
+        ambulanceAvailable:
+          type: boolean
         rating:
           type: ["number", "null"]
-        distance:
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    HospitalInput:
+      type: object
+      required:
+        - name
+        - imageUrl
+        - description
+        - address
+        - city
+        - state
+        - phone
+        - email
+        - specialties
+        - totalBeds
+        - availableBeds
+        - totalICUBeds
+        - availableICUBeds
+        - emergencyAvailable
+        - ambulanceAvailable
+      properties:
+        name:
+          type: string
+        imageUrl:
+          type: string
+        description:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        website:
           type: ["string", "null"]
+        specialties:
+          type: array
+          items:
+            type: string
+        totalBeds:
+          type: integer
+        availableBeds:
+          type: integer
+        totalICUBeds:
+          type: integer
+        availableICUBeds:
+          type: integer
+        emergencyAvailable:
+          type: boolean
+        ambulanceAvailable:
+          type: boolean
+        rating:
+          type: ["number", "null"]
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+
+    HospitalAvailabilityUpdate:
+      type: object
+      required: [availableBeds, availableICUBeds]
+      properties:
+        availableBeds:
+          type: integer
+        availableICUBeds:
+          type: integer
+
+    HospitalSpecialist:
+      type: object
+      required: [name, specialty, experienceYears]
+      properties:
+        name:
+          type: string
+        specialty:
+          type: string
+        experienceYears:
+          type: integer
+
+    HospitalDetail:
+      allOf:
+        - $ref: "#/components/schemas/Hospital"
+        - type: object
+          required:
+            - imageGallery
+            - specialists
+            - facilities
+            - estimatedWaitingMinutes
+            - bedOccupancyPercent
+            - icuOccupancyPercent
+            - emergencyQueueStatus
+            - loadStatus
+          properties:
+            imageGallery:
+              type: array
+              items:
+                type: string
+            specialists:
+              type: array
+              items:
+                $ref: "#/components/schemas/HospitalSpecialist"
+            facilities:
+              type: array
+              items:
+                type: string
+            estimatedWaitingMinutes:
+              type: integer
+            bedOccupancyPercent:
+              type: number
+            icuOccupancyPercent:
+              type: number
+            emergencyQueueStatus:
+              type: string
+              enum: [Low, Moderate, High]
+            loadStatus:
+              type: string
+              enum: [Low Load, Medium Load, High Load]
 
     AiChatInput:
       type: object

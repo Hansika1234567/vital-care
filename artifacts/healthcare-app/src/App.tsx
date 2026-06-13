@@ -20,6 +20,7 @@ import PatientAnalytics from "@/pages/patient/analytics";
 import PatientAlerts from "@/pages/patient/alerts";
 import PatientAppointments from "@/pages/patient/appointments";
 import PatientHospitals from "@/pages/patient/hospitals";
+import HospitalDetail from "@/pages/patient/hospital-detail";
 import AiAssistant from "@/pages/patient/ai-assistant";
 import PatientSettings from "@/pages/patient/settings";
 import AiInsights from "@/pages/patient/insights";
@@ -79,6 +80,9 @@ function Router() {
         </Route>
         <Route path="/patient/appointments">
           <ProtectedRoute allowedRoles={["patient"]}><PatientAppointments /></ProtectedRoute>
+        </Route>
+        <Route path="/patient/hospitals/:id">
+          <ProtectedRoute allowedRoles={["patient"]}><HospitalDetail /></ProtectedRoute>
         </Route>
         <Route path="/patient/hospitals">
           <ProtectedRoute allowedRoles={["patient"]}><PatientHospitals /></ProtectedRoute>

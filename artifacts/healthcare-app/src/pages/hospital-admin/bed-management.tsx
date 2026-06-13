@@ -1,12 +1,16 @@
-import { useState } from "react";
-import { useGetHospitals } from "@workspace/api-client-react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getGetHospitalsQueryOptions, useUpdateHospitalAvailability } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bed, ActivitySquare, Zap, TrendingUp, Users, AlertTriangle, CheckCircle, Clock, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Bed, ActivitySquare, TrendingUp, CheckCircle, Clock, RefreshCw, Save, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const deptBeds = [
   { dept: "General Ward", total: 80, occupied: 62, color: "blue" },
@@ -18,6 +22,8 @@ const deptBeds = [
   { dept: "Neurology", total: 15, occupied: 13, color: "indigo" },
   { dept: "Oncology", total: 12, occupied: 8, color: "orange" },
 ];
+
+const icuDept = deptBeds.find((d) => d.dept === "ICU")!;
 
 const activity = [
   { time: "2 min ago", event: "Bed G-14 admitted", dept: "General Ward", type: "admit" },
@@ -40,21 +46,70 @@ const colorMap: Record<string, { bg: string; bar: string; text: string }> = {
 };
 
 export default function BedManagement() {
-  const { data: hospitals, isLoading, refetch } = useGetHospitals();
+  const { data: hospitals, isLoading, refetch } = useQuery({
+    ...getGetHospitalsQueryOptions(),
+    refetchInterval: 30000,
+  });
+  const { toast } = useToast();
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [bedInput, setBedInput] = useState("");
+  const [icuInput, setIcuInput] = useState("");
+
+  const updateMutation = useUpdateHospitalAvailability({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Availability updated", description: "Bed counts saved successfully." });
+        refetch();
+        setLastUpdated(new Date());
+      },
+      onError: () => {
+        toast({ title: "Update failed", description: "Could not update bed availability.", variant: "destructive" });
+      },
+    },
+  });
 
   const handleRefresh = () => {
     refetch();
     setLastUpdated(new Date());
   };
 
-  const totalBeds = deptBeds.reduce((s, d) => s + d.total, 0);
-  const totalOccupied = deptBeds.reduce((s, d) => s + d.occupied, 0);
-  const totalAvailable = totalBeds - totalOccupied;
-  const occupancyRate = Math.round((totalOccupied / totalBeds) * 100);
+  const selected = hospitals?.find((h) => h.id === selectedId) ?? hospitals?.[0] ?? null;
 
-  const icuDept = deptBeds.find(d => d.dept === "ICU")!;
-  const icuRate = Math.round((icuDept.occupied / icuDept.total) * 100);
+  const totalBeds = hospitals?.reduce((s, h) => s + h.totalBeds, 0) ?? deptBeds.reduce((s, d) => s + d.total, 0);
+  const totalAvailable = hospitals?.reduce((s, h) => s + h.availableBeds, 0) ?? deptBeds.reduce((s, d) => s + (d.total - d.occupied), 0);
+  const totalOccupied = totalBeds - totalAvailable;
+  const occupancyRate = totalBeds > 0 ? Math.round((totalOccupied / totalBeds) * 100) : 0;
+
+  const totalICU = hospitals?.reduce((s, h) => s + h.totalICUBeds, 0) ?? icuDept.total;
+  const icuAvailable = hospitals?.reduce((s, h) => s + h.availableICUBeds, 0) ?? (icuDept.total - icuDept.occupied);
+  const icuOccupied = totalICU - icuAvailable;
+  const icuRate = totalICU > 0 ? Math.round((icuOccupied / totalICU) * 100) : 0;
+
+  const selectHospital = (id: number) => {
+    const h = hospitals?.find((x) => x.id === id);
+    if (!h) return;
+    setSelectedId(id);
+    setBedInput(String(h.availableBeds));
+    setIcuInput(String(h.availableICUBeds));
+  };
+
+  const handleSaveAvailability = () => {
+    if (!selected) return;
+    updateMutation.mutate({
+      hospitalId: selected.id,
+      data: {
+        availableBeds: Number(bedInput),
+        availableICUBeds: Number(icuInput),
+      },
+    });
+  };
+
+  useEffect(() => {
+    if (hospitals?.length && selectedId === null) {
+      selectHospital(hospitals[0].id);
+    }
+  }, [hospitals, selectedId]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
@@ -116,7 +171,7 @@ export default function BedManagement() {
               <ActivitySquare className="h-5 w-5 text-white/70" />
             </div>
             <div className="text-4xl font-black">{icuRate}%</div>
-            <div className="text-white/70 text-xs mt-1">{icuDept.occupied}/{icuDept.total} ICU beds</div>
+            <div className="text-white/70 text-xs mt-1">{icuOccupied}/{totalICU} ICU beds</div>
           </CardContent>
         </Card>
       </div>
@@ -176,21 +231,74 @@ export default function BedManagement() {
             <CardContent className="p-4 pt-0 space-y-3">
               {isLoading ? (
                 Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)
-              ) : hospitals?.slice(0, 4).map(h => (
-                <div key={h.id} className="flex items-center justify-between gap-2">
+              ) : hospitals?.slice(0, 6).map(h => (
+                <button
+                  key={h.id}
+                  type="button"
+                  onClick={() => selectHospital(h.id)}
+                  className={cn(
+                    "w-full flex items-center justify-between gap-2 text-left rounded-lg p-2 transition-colors",
+                    selected?.id === h.id ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-muted/50",
+                  )}
+                >
                   <div className="min-w-0">
                     <p className="text-xs font-medium truncate">{h.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{h.bedsAvailable} beds free</p>
+                    <p className="text-[10px] text-muted-foreground">{h.availableBeds} beds · {h.availableICUBeds} ICU free</p>
                   </div>
-                  <Badge variant="outline" className={cn("text-[10px] shrink-0", h.bedsAvailable > 5 ? "border-emerald-300 text-emerald-600" : "border-red-300 text-red-600")}>
-                    {h.bedsAvailable > 5 ? "Available" : "Full"}
+                  <Badge variant="outline" className={cn("text-[10px] shrink-0", h.availableBeds > 5 ? "border-emerald-300 text-emerald-600" : "border-red-300 text-red-600")}>
+                    {h.availableBeds > 5 ? "Available" : "Full"}
                   </Badge>
-                </div>
+                </button>
               ))}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {selected && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Save className="h-4 w-4" />
+              Update Availability — {selected.name}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-6 items-end">
+            <div className="space-y-2">
+              <Label htmlFor="beds-input">Available Beds (max {selected.totalBeds})</Label>
+              <Input
+                id="beds-input"
+                type="number"
+                min={0}
+                max={selected.totalBeds}
+                value={bedInput}
+                onChange={(e) => setBedInput(e.target.value)}
+                className="w-40"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="icu-input">Available ICU Beds (max {selected.totalICUBeds})</Label>
+              <Input
+                id="icu-input"
+                type="number"
+                min={0}
+                max={selected.totalICUBeds}
+                value={icuInput}
+                onChange={(e) => setIcuInput(e.target.value)}
+                className="w-40"
+              />
+            </div>
+            <Button
+              className="gap-2"
+              onClick={handleSaveAvailability}
+              disabled={updateMutation.isPending}
+            >
+              <Save className="h-4 w-4" />
+              {updateMutation.isPending ? "Saving..." : "Save Availability"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
